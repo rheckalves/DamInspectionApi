@@ -1,0 +1,6 @@
+@DamInspectionApi_HostAddress = http://localhost:5299
+
+GET {{DamInspectionApi_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
