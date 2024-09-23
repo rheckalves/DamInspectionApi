@@ -6,6 +6,9 @@ Thumbs.db
 
 *.log
 
+.env
+.env.development
+
 .vscode/
 *.user
 *.suo
