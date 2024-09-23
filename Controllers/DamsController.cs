@@ -1,12 +1,8 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
-using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
-using DamInspectionApi.Data;
+using AutoMapper;
+using DamInspectionApi.Application.DTOs;
 using DamInspectionApi.Models;
+using DamInspectionApi.Services.Interfaces;
+using Microsoft.AspNetCore.Mvc;
 
 namespace DamInspectionApi.Controllers
 {
@@ -14,95 +10,68 @@ namespace DamInspectionApi.Controllers
     [ApiController]
     public class DamsController : ControllerBase
     {
-        private readonly ApplicationDbContext _context;
+        private readonly IDamService _service;
+        private readonly IMapper _mapper;
 
-        public DamsController(ApplicationDbContext context)
+        public DamsController(IDamService service, IMapper mapper)
         {
-            _context = context;
+            _service = service;
+            _mapper = mapper;
         }
 
         // GET: api/Dams
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<Dam>>> GetDams()
+        public async Task<ActionResult<IEnumerable<DamReadDto>>> GetDams()
         {
-            return await _context.Dams.ToListAsync();
+            var dams = await _service.GetAllAsync();
+            var damsDto = _mapper.Map<IEnumerable<DamReadDto>>(dams);
+            return Ok(damsDto);
         }
 
         // GET: api/Dams/5
         [HttpGet("{id}")]
-        public async Task<ActionResult<Dam>> GetDam(int id)
+        public async Task<ActionResult<DamReadDto>> GetDam(int id)
         {
-            var dam = await _context.Dams.FindAsync(id);
-
+            var dam = await _service.GetByIdAsync(id);
             if (dam == null)
             {
                 return NotFound();
             }
-
-            return dam;
-        }
-
-        // PUT: api/Dams/5
-        // To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
-        [HttpPut("{id}")]
-        public async Task<IActionResult> PutDam(int id, Dam dam)
-        {
-            if (id != dam.Id)
-            {
-                return BadRequest();
-            }
-
-            _context.Entry(dam).State = EntityState.Modified;
-
-            try
-            {
-                await _context.SaveChangesAsync();
-            }
-            catch (DbUpdateConcurrencyException)
-            {
-                if (!DamExists(id))
-                {
-                    return NotFound();
-                }
-                else
-                {
-                    throw;
-                }
-            }
-
-            return NoContent();
+            return Ok(_mapper.Map<DamReadDto>(dam));
         }
 
         // POST: api/Dams
-        // To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
         [HttpPost]
-        public async Task<ActionResult<Dam>> PostDam(Dam dam)
+        public async Task<ActionResult<DamReadDto>> PostDam(DamWriteDto damDto)
         {
-            _context.Dams.Add(dam);
-            await _context.SaveChangesAsync();
+            var dam = _mapper.Map<Dam>(damDto);
+            var createdDam = await _service.CreateAsync(dam);
+            return CreatedAtAction(nameof(GetDam), new { id = createdDam.Id }, _mapper.Map<DamReadDto>(createdDam));
+        }
 
-            return CreatedAtAction("GetDam", new { id = dam.Id }, dam);
+        // PUT: api/Dams/5
+        [HttpPut("{id}")]
+        public async Task<IActionResult> PutDam(int id, DamWriteDto damDto)
+        {
+            var dam = _mapper.Map<Dam>(damDto);
+            var updated = await _service.UpdateAsync(id, dam);
+            if (!updated)
+            {
+                return NotFound();
+            }
+            return NoContent();
         }
 
         // DELETE: api/Dams/5
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteDam(int id)
         {
-            var dam = await _context.Dams.FindAsync(id);
-            if (dam == null)
+            var deleted = await _service.DeleteAsync(id);
+            if (!deleted)
             {
                 return NotFound();
             }
-
-            _context.Dams.Remove(dam);
-            await _context.SaveChangesAsync();
-
             return NoContent();
-        }
-
-        private bool DamExists(int id)
-        {
-            return _context.Dams.Any(e => e.Id == id);
         }
     }
 }

@@ -1,12 +1,8 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
-using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
-using DamInspectionApi.Data;
+using AutoMapper;
+using DamInspectionApi.Application.DTOs;
 using DamInspectionApi.Models;
+using DamInspectionApi.Services.Interfaces;
+using Microsoft.AspNetCore.Mvc;
 
 namespace DamInspectionApi.Controllers
 {
@@ -14,95 +10,68 @@ namespace DamInspectionApi.Controllers
     [ApiController]
     public class InspectionsController : ControllerBase
     {
-        private readonly ApplicationDbContext _context;
+        private readonly IInspectionService _service;
+        private readonly IMapper _mapper;
 
-        public InspectionsController(ApplicationDbContext context)
+        public InspectionsController(IInspectionService service, IMapper mapper)
         {
-            _context = context;
+            _service = service;
+            _mapper = mapper;
         }
 
         // GET: api/Inspections
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<Inspection>>> GetInspections()
+        public async Task<ActionResult<IEnumerable<InspectionReadDto>>> GetInspections()
         {
-            return await _context.Inspections.ToListAsync();
+            var inspections = await _service.GetAllAsync();
+            var inspectionsDto = _mapper.Map<IEnumerable<InspectionReadDto>>(inspections);
+            return Ok(inspectionsDto);
         }
 
         // GET: api/Inspections/5
         [HttpGet("{id}")]
-        public async Task<ActionResult<Inspection>> GetInspection(int id)
+        public async Task<ActionResult<InspectionReadDto>> GetInspection(int id)
         {
-            var inspection = await _context.Inspections.FindAsync(id);
-
+            var inspection = await _service.GetByIdAsync(id);
             if (inspection == null)
             {
                 return NotFound();
             }
-
-            return inspection;
-        }
-
-        // PUT: api/Inspections/5
-        // To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
-        [HttpPut("{id}")]
-        public async Task<IActionResult> PutInspection(int id, Inspection inspection)
-        {
-            if (id != inspection.Id)
-            {
-                return BadRequest();
-            }
-
-            _context.Entry(inspection).State = EntityState.Modified;
-
-            try
-            {
-                await _context.SaveChangesAsync();
-            }
-            catch (DbUpdateConcurrencyException)
-            {
-                if (!InspectionExists(id))
-                {
-                    return NotFound();
-                }
-                else
-                {
-                    throw;
-                }
-            }
-
-            return NoContent();
+            return Ok(_mapper.Map<InspectionReadDto>(inspection));
         }
 
         // POST: api/Inspections
-        // To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
         [HttpPost]
-        public async Task<ActionResult<Inspection>> PostInspection(Inspection inspection)
+        public async Task<ActionResult<InspectionReadDto>> PostInspection(InspectionWriteDto inspectionDto)
         {
-            _context.Inspections.Add(inspection);
-            await _context.SaveChangesAsync();
+            var inspection = _mapper.Map<Inspection>(inspectionDto);
+            var createdInspection = await _service.CreateAsync(inspection);
+            return CreatedAtAction(nameof(GetInspection), new { id = createdInspection.Id }, _mapper.Map<InspectionReadDto>(createdInspection));
+        }
 
-            return CreatedAtAction("GetInspection", new { id = inspection.Id }, inspection);
+        // PUT: api/Inspections/5
+        [HttpPut("{id}")]
+        public async Task<IActionResult> PutInspection(int id, InspectionWriteDto inspectionDto)
+        {
+            var inspection = _mapper.Map<Inspection>(inspectionDto);
+            var updated = await _service.UpdateAsync(id, inspection);
+            if (!updated)
+            {
+                return NotFound();
+            }
+            return NoContent();
         }
 
         // DELETE: api/Inspections/5
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteInspection(int id)
         {
-            var inspection = await _context.Inspections.FindAsync(id);
-            if (inspection == null)
+            var deleted = await _service.DeleteAsync(id);
+            if (!deleted)
             {
                 return NotFound();
             }
-
-            _context.Inspections.Remove(inspection);
-            await _context.SaveChangesAsync();
-
             return NoContent();
-        }
-
-        private bool InspectionExists(int id)
-        {
-            return _context.Inspections.Any(e => e.Id == id);
         }
     }
 }

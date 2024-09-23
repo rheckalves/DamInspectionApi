@@ -16,7 +16,11 @@ namespace DamInspectionApi.Models
         [Required]
         public int RiskLevel { get; set; } // 1: Baixo, 2: Médio, 3: Alto
 
+        // Propriedade de chave estrangeira (DamId) - usada na requisição
+        [Required]
         public int DamId { get; set; }
-        public Dam Dam { get; set; } // Associação com a Barragem
+
+        // Propriedade de navegação para a entidade Dam - será carregada no backend
+        public Dam? Dam { get; set; }
     }
 }

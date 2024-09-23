@@ -1,5 +1,9 @@
 using Microsoft.EntityFrameworkCore;
 using DamInspectionApi.Data;
+using DamInspectionApi.Repositories.Interfaces;
+using DamInspectionApi.Repositories;
+using DamInspectionApi.Services.Interfaces;
+using DamInspectionApi.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -12,6 +16,14 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
+builder.Services.AddAutoMapper(typeof(Program));
+
+
+builder.Services.AddScoped<IDamRepository, DamRepository>();
+builder.Services.AddScoped<IDamService, DamService>();
+builder.Services.AddScoped<IInspectionRepository, InspectionRepository>();
+builder.Services.AddScoped<IInspectionService, InspectionService>();
+
 
 var app = builder.Build();
 
